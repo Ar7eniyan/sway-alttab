@@ -34,7 +34,9 @@ fn main() {
                 );
                 ud.write_event(&ev).unwrap();
             }
-            Ok((ReadStatus::Sync, ev)) => println!("Sync: {}", ev.event_type().unwrap()),
+            Ok((ReadStatus::Sync, _)) => {
+                println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
+            }
             Err(e) => {
                 if e.kind() != ErrorKind::WouldBlock {
                     panic!("Error: {}", e);
