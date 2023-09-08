@@ -1,10 +1,15 @@
 use std::fs::OpenOptions;
-use std::io::ErrorKind;
+use std::io;
 
 use evdev_rs::Device;
+use evdev_rs::InputEvent;
 use evdev_rs::ReadFlag;
 use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
+
+fn on_event(evt: InputEvent) -> Option<InputEvent> {
+    Some(evt)
+}
 
 fn main() {
     let file = OpenOptions::new()
@@ -22,23 +27,18 @@ fn main() {
         let ev = d.next_event(ReadFlag::BLOCKING);
         match ev {
             Ok((ReadStatus::Success, ev)) => {
-                println!(
-                    "Event: time {}.{}, +++ {}, {}, {} +++",
-                    ev.time.tv_sec,
-                    ev.time.tv_usec,
-                    ev.event_type()
-                        .map(|ev_type| format!("{}", ev_type))
-                        .unwrap_or("".to_owned()),
-                    ev.event_code,
-                    ev.value
-                );
-                ud.write_event(&ev).unwrap();
+                // We search for event_type = EV_KEY,
+                // event_code = KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB.
+                // Value is 1 for press and 0 for release
+                if let Some(ev) = on_event(ev) {
+                    ud.write_event(&ev).unwrap();
+                }
             }
             Ok((ReadStatus::Sync, _)) => {
                 println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
             }
             Err(e) => {
-                if e.kind() != ErrorKind::WouldBlock {
+                if e.kind() != io::ErrorKind::WouldBlock {
                     panic!("Error: {}", e);
                 }
             }
