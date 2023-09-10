@@ -1,5 +1,6 @@
 use std::fs::OpenOptions;
 use std::io;
+use std::sync::mpsc::Sender;
 
 use evdev_rs::enums::EventCode::EV_KEY;
 use evdev_rs::enums::EV_KEY::{KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB};
@@ -9,15 +10,21 @@ use evdev_rs::ReadFlag;
 use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
 
+enum AltTabEvent {
+    Tab,
+    EndMeta,
+}
+
 struct AltTabInterceptor {
     in_device: Device,
     out_device: UInputDevice,
+    evt_tx: Sender<AltTabEvent>,
     was_tab: bool,
     meta_pressed: bool,
 }
 
 impl AltTabInterceptor {
-    fn new(in_device_path: &str) -> io::Result<Self> {
+    fn new(in_device_path: &str, evt_tx: Sender<AltTabEvent>) -> io::Result<Self> {
         let file = OpenOptions::new()
             .read(true)
             .write(true)
@@ -30,6 +37,7 @@ impl AltTabInterceptor {
         Ok(Self {
             in_device,
             out_device,
+            evt_tx,
             was_tab: false,
             meta_pressed: false,
         })
@@ -64,7 +72,7 @@ impl AltTabInterceptor {
             (EV_KEY(KEY_LEFTMETA) | EV_KEY(KEY_RIGHTMETA), 0 | 1) => {
                 self.meta_pressed = evt.value == 1;
                 if evt.value == 0 && self.was_tab {
-                    println!("END_META event");
+                    self.evt_tx.send(AltTabEvent::EndMeta).unwrap();
                     self.was_tab = false;
                 }
                 Some(evt)
@@ -72,7 +80,7 @@ impl AltTabInterceptor {
             (EV_KEY(KEY_TAB), 1) => {
                 if self.meta_pressed {
                     self.was_tab = true;
-                    println!("TAB event");
+                    self.evt_tx.send(AltTabEvent::Tab).unwrap();
                     None
                 } else {
                     Some(evt)
@@ -84,11 +92,19 @@ impl AltTabInterceptor {
 }
 
 fn main() {
-    let mut interceptor = AltTabInterceptor::new("/dev/input/event12").unwrap();
+    let (tx, rx) = std::sync::mpsc::channel::<AltTabEvent>();
+
+    let mut interceptor = AltTabInterceptor::new("/dev/input/event12", tx).unwrap();
     println!(
         "uinput device: {}",
         interceptor.out_device.devnode().unwrap_or("none")
     );
 
-    interceptor.run();
+    std::thread::Builder::new()
+        .name("interceptor".to_string())
+        .spawn(move || interceptor.run())
+        .unwrap();
+
+    // Should I do something else here?
+    std::thread::park();
 }
