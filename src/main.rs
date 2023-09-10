@@ -10,6 +10,7 @@ use evdev_rs::ReadFlag;
 use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
 
+#[derive(Debug)]
 enum AltTabEvent {
     Tab,
     EndMeta,
@@ -103,7 +104,7 @@ impl AltTabWorkspaceSwitcher {
     fn run(&mut self) {
         loop {
             let evt = self.evt_rx.recv().unwrap();
-            // println!("Got event: {:?}", evt);
+            println!("Got event: {:?}", evt);
         }
     }
 }
