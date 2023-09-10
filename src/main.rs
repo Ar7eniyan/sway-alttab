@@ -1,6 +1,6 @@
 use std::fs::OpenOptions;
 use std::io;
-use std::sync::mpsc::Sender;
+use std::sync::mpsc::{Receiver, Sender};
 
 use evdev_rs::enums::EventCode::EV_KEY;
 use evdev_rs::enums::EV_KEY::{KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB};
@@ -91,6 +91,23 @@ impl AltTabInterceptor {
     }
 }
 
+struct AltTabWorkspaceSwitcher {
+    evt_rx: Receiver<AltTabEvent>,
+}
+
+impl AltTabWorkspaceSwitcher {
+    fn new(evt_rx: Receiver<AltTabEvent>) -> Self {
+        Self { evt_rx }
+    }
+
+    fn run(&mut self) {
+        loop {
+            let evt = self.evt_rx.recv().unwrap();
+            // println!("Got event: {:?}", evt);
+        }
+    }
+}
+
 fn main() {
     let (tx, rx) = std::sync::mpsc::channel::<AltTabEvent>();
 
@@ -99,6 +116,13 @@ fn main() {
         "uinput device: {}",
         interceptor.out_device.devnode().unwrap_or("none")
     );
+
+    let mut ws_switcher = AltTabWorkspaceSwitcher::new(rx);
+
+    std::thread::Builder::new()
+        .name("workspace-switcher".to_string())
+        .spawn(move || ws_switcher.run())
+        .unwrap();
 
     std::thread::Builder::new()
         .name("interceptor".to_string())
