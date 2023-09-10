@@ -10,15 +10,49 @@ use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
 
 struct AltTabInterceptor {
+    in_device: Device,
+    out_device: UInputDevice,
     was_tab: bool,
     meta_pressed: bool,
 }
 
 impl AltTabInterceptor {
-    fn new() -> Self {
-        Self {
+    fn new(in_device_path: &str) -> io::Result<Self> {
+        let file = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(in_device_path)?;
+
+        let mut in_device = Device::new_from_file(file)?;
+        in_device.grab(evdev_rs::GrabMode::Grab)?;
+        let out_device = UInputDevice::create_from_device(&in_device)?;
+
+        Ok(Self {
+            in_device,
+            out_device,
             was_tab: false,
             meta_pressed: false,
+        })
+    }
+
+    fn run(&mut self) {
+        loop {
+            let ev = self.in_device.next_event(ReadFlag::BLOCKING);
+            match ev {
+                Ok((ReadStatus::Success, ev)) => {
+                    if let Some(ev) = self.on_event(ev) {
+                        self.out_device.write_event(&ev).unwrap();
+                    }
+                }
+                Ok((ReadStatus::Sync, _)) => {
+                    println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
+                }
+                Err(ref e) => {
+                    if e.kind() != io::ErrorKind::WouldBlock {
+                        ev.unwrap();
+                    }
+                }
+            }
         }
     }
 
@@ -52,35 +86,11 @@ impl AltTabInterceptor {
 }
 
 fn main() {
-    let file = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open("/dev/input/event12") // TODO: don't hardcode
-        .unwrap();
-    let mut d = Device::new_from_file(file).unwrap();
-    d.grab(evdev_rs::GrabMode::Grab).unwrap();
+    let mut interceptor = AltTabInterceptor::new("/dev/input/event12").unwrap();
+    println!(
+        "uinput device: {}",
+        interceptor.out_device.devnode().unwrap_or("none")
+    );
 
-    let ud = UInputDevice::create_from_device(&d).unwrap();
-    println!("uinput device: {}", ud.devnode().unwrap_or("none"));
-
-    let mut intercept = AltTabInterceptor::new();
-
-    loop {
-        let ev = d.next_event(ReadFlag::BLOCKING);
-        match ev {
-            Ok((ReadStatus::Success, ev)) => {
-                if let Some(ev) = intercept.on_event(ev) {
-                    ud.write_event(&ev).unwrap();
-                }
-            }
-            Ok((ReadStatus::Sync, _)) => {
-                println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
-            }
-            Err(e) => {
-                if e.kind() != io::ErrorKind::WouldBlock {
-                    panic!("Error: {}", e);
-                }
-            }
-        }
-    }
+    interceptor.run();
 }
