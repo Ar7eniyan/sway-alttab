@@ -71,9 +71,7 @@ impl AltTabInterceptor {
             }
             (EV_KEY(KEY_TAB), 1) => {
                 if self.meta_pressed {
-                    if !self.was_tab {
-                        self.was_tab = true;
-                    }
+                    self.was_tab = true;
                     println!("TAB event");
                     None
                 } else {
