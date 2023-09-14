@@ -1,6 +1,6 @@
 ###  How to set up the permissions for keyboard input/output to work
 
-- Create udev rules for `/dev/input` and for `/dev/uinput`:
+- Create udev rules for `/dev/input*` and `/dev/uinput`:
     -  `/etc/udev/rules.d/72-sway-alttab-input.rules`:
         ```
         KERNEL=="uinput", MODE="0660", TAG+="uaccess"
