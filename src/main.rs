@@ -105,7 +105,7 @@ impl AltTabWorkspaceSwitcher {
     fn run(&mut self) {
         loop {
             let evt = self.evt_rx.recv().unwrap();
-            println!("Got event: {:?}", evt);
+            println!("Got event: {:#?}", evt);
         }
     }
 }
