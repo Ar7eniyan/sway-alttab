@@ -163,6 +163,8 @@ fn main() {
         }
     }
 
+    println!("Sway IPC connections has been closed, exiting...");
+
     // Should I do something else here?
-    std::thread::park();
+    // std::thread::park();
 }
