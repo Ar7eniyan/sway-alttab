@@ -155,13 +155,11 @@ fn main() {
         match evt {
             Ok(swayipc::Event::Workspace(evt)) => {
                 tx.send(WorkspaceSwitcherEvent::SwayWsEvent(evt)).unwrap()
-            },
+            }
             Err(e) => {
                 println!("Sway event stream error: {:?}", e);
-            },
-            _ => {
-
-            },
+            }
+            _ => {}
         }
     }
 
