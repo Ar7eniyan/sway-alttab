@@ -260,7 +260,6 @@ fn main() {
     let evt_iter = conn.subscribe([swayipc::EventType::Workspace]).unwrap();
 
     // Forward sway workspace events to the switcher thread
-    // Should I make this a separate thread?
     for evt in evt_iter {
         match evt {
             Ok(swayipc::Event::Workspace(evt)) => {
@@ -273,8 +272,5 @@ fn main() {
         }
     }
 
-    println!("Sway IPC connections has been closed, exiting...");
-
-    // Should I do something else here?
-    // std::thread::park();
+    panic!("Sway IPC connection has been closed");
 }
