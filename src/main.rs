@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fs::OpenOptions;
 use std::io;
 use std::sync::mpsc::{Receiver, Sender};
@@ -95,17 +96,56 @@ impl AltTabInterceptor {
 
 struct AltTabWorkspaceSwitcher {
     evt_rx: Receiver<WorkspaceSwitcherEvent>,
+    // Workspace IDs in the most to least recently used order
+    mru_workspaces: VecDeque<i64>,
 }
 
 impl AltTabWorkspaceSwitcher {
     fn new(evt_rx: Receiver<WorkspaceSwitcherEvent>) -> Self {
-        Self { evt_rx }
+        Self {
+            evt_rx,
+            mru_workspaces: VecDeque::new(),
+        }
     }
 
     fn run(&mut self) {
         loop {
             let evt = self.evt_rx.recv().unwrap();
-            println!("Got event: {:#?}", evt);
+            // println!("Got event: {:#?}", evt);
+
+            match evt {
+                WorkspaceSwitcherEvent::Tab => {}
+                WorkspaceSwitcherEvent::EndMeta => {}
+                WorkspaceSwitcherEvent::SwayWsEvent(ws_event) => {
+                    self.handle_ws_event(ws_event.as_ref());
+                }
+            }
+        }
+    }
+
+    // Can I take the event by moving or it will cost performance?
+    fn handle_ws_event(&mut self, ws_event: &swayipc::WorkspaceEvent) {
+        // Sway workspace event types:
+        // init - add the to the end of the list
+        // empty - remove from the list
+        // focus - move to the beginning of the list
+        // move, rename, urgent, reload - ignore
+
+        // All events we're interested in have `current` workspace field
+        if let Some(current_id) = ws_event.current.as_ref().map(|x| x.id) {
+            match ws_event.change {
+                swayipc::WorkspaceChange::Init => {
+                    self.mru_workspaces.push_back(current_id);
+                }
+                swayipc::WorkspaceChange::Empty => {
+                    self.mru_workspaces.retain(|&x| x != current_id);
+                }
+                swayipc::WorkspaceChange::Focus => {
+                    self.mru_workspaces.retain(|&x| x != current_id);
+                    self.mru_workspaces.push_front(current_id);
+                }
+                _ => {}
+            }
         }
     }
 }
@@ -139,15 +179,6 @@ fn main() {
 
     let conn = swayipc::Connection::new().unwrap();
     let evt_iter = conn.subscribe([swayipc::EventType::Workspace]).unwrap();
-
-    // sway workspace event types:
-    // init - TODO
-    // empty - TODO
-    // focus - TODO
-    // move - (?) ignore
-    // rename - ignore
-    // urgent - ignore
-    // reload - ignore
 
     // Forward sway workspace events to the switcher thread
     // Should I make this a separate thread?
