@@ -96,6 +96,8 @@ impl AltTabInterceptor {
 
 struct AltTabWorkspaceSwitcher {
     evt_rx: Receiver<WorkspaceSwitcherEvent>,
+    // Sway IPC connection
+    sway_ipc: swayipc::Connection,
     // Workspace IDs in the most to least recently used order
     mru_workspaces: VecDeque<i64>,
     // Count of tab keypresses in a row, zero means the tab sequence is not triggered
@@ -107,6 +109,8 @@ impl AltTabWorkspaceSwitcher {
     fn new(evt_rx: Receiver<WorkspaceSwitcherEvent>) -> Self {
         Self {
             evt_rx,
+            sway_ipc: swayipc::Connection::new()
+                .expect("Sway IPC should be available for connection"),
             mru_workspaces: VecDeque::new(),
             tab_count: 0,
         }
@@ -121,7 +125,12 @@ impl AltTabWorkspaceSwitcher {
                 WorkspaceSwitcherEvent::Tab => {
                     // Switch to the next workspace, wrapping around if currently at the end
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
-                    // TODO: send sway ipc command to change workspace
+                    let tree = self.sway_ipc.get_tree().unwrap();
+                    let ws_name = Self::workspace_name_by_id(&tree, self.mru_workspaces[self.tab_count])
+                        .expect("An ID must be associated with a workspace with a vaild name (MRU-list is probably not in sync)");
+                    self.sway_ipc
+                        .run_command(format!("workspace {}", ws_name))
+                        .unwrap();
                 }
                 WorkspaceSwitcherEvent::EndMeta => {
                     self.end_sequence(self.mru_workspaces[self.tab_count]);
@@ -131,6 +140,15 @@ impl AltTabWorkspaceSwitcher {
                 }
             }
         }
+    }
+
+    fn workspace_name_by_id(tree: &swayipc::Node, id: i64) -> Option<&str> {
+        tree.nodes
+            .iter()
+            .flat_map(|output| output.nodes.iter())
+            .find(|workspace| workspace.id == id)?
+            .name
+            .as_deref()
     }
 
     fn end_sequence(&mut self, new_ws_id: i64) {
