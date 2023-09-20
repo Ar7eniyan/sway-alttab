@@ -144,7 +144,6 @@ impl AltTabWorkspaceSwitcher {
 
     // Reduces code nesting
     #[allow(clippy::comparison_chain)]
-    // Can I take the event by moving or it will cost performance?
     fn handle_ws_event(&mut self, ws_event: &swayipc::WorkspaceEvent) {
         // Sway workspace event types:
         // init - add the to the end of the list
