@@ -11,11 +11,23 @@ use evdev_rs::ReadFlag;
 use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
 
-#[derive(Debug)]
 enum WorkspaceSwitcherEvent {
     Tab,
     EndMeta,
     SwayWsEvent(Box<swayipc::WorkspaceEvent>),
+}
+
+impl std::fmt::Debug for WorkspaceSwitcherEvent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Tab => f.write_str("Tab"),
+            Self::EndMeta => f.write_str("EndMeta"),
+            Self::SwayWsEvent(evt) => {
+                // Default debug output for WorkspaceEvent is too large, display only the change type
+                f.write_fmt(format_args!("SwayWsEvent({:?})", evt.as_ref().change))
+            }
+        }
+    }
 }
 
 struct AltTabInterceptor {
@@ -119,7 +131,7 @@ impl AltTabWorkspaceSwitcher {
     fn run(&mut self) {
         loop {
             let evt = self.evt_rx.recv().unwrap();
-            // println!("Got event: {:#?}", evt);
+            println!("Got event: {:?}, mru list: {}", evt, self.format_mru_list());
 
             match evt {
                 WorkspaceSwitcherEvent::Tab => {
@@ -202,6 +214,18 @@ impl AltTabWorkspaceSwitcher {
                 _ => {}
             }
         }
+    }
+
+    // For debugging purposes
+    fn format_mru_list(&mut self) -> String {
+        let tree = self.sway_ipc.get_tree().unwrap();
+        format!(
+            "{:?}",
+            self.mru_workspaces
+                .iter()
+                .map(|&id| Self::workspace_name_by_id(&tree, id))
+                .collect::<Vec<_>>()
+        )
     }
 }
 
