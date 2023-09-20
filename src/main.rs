@@ -98,6 +98,9 @@ struct AltTabWorkspaceSwitcher {
     evt_rx: Receiver<WorkspaceSwitcherEvent>,
     // Workspace IDs in the most to least recently used order
     mru_workspaces: VecDeque<i64>,
+    // Count of tab keypresses in a row, zero means the tab sequence is not triggered
+    // Always a valid index for mru_workspaces
+    tab_count: usize,
 }
 
 impl AltTabWorkspaceSwitcher {
@@ -105,6 +108,7 @@ impl AltTabWorkspaceSwitcher {
         Self {
             evt_rx,
             mru_workspaces: VecDeque::new(),
+            tab_count: 0,
         }
     }
 
@@ -114,8 +118,14 @@ impl AltTabWorkspaceSwitcher {
             // println!("Got event: {:#?}", evt);
 
             match evt {
-                WorkspaceSwitcherEvent::Tab => {}
-                WorkspaceSwitcherEvent::EndMeta => {}
+                WorkspaceSwitcherEvent::Tab => {
+                    // Switch to the next workspace, wrapping around if currently at the end
+                    self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
+                    // TODO: send sway ipc command to change workspace
+                }
+                WorkspaceSwitcherEvent::EndMeta => {
+                    self.end_sequence(self.mru_workspaces[self.tab_count]);
+                }
                 WorkspaceSwitcherEvent::SwayWsEvent(ws_event) => {
                     self.handle_ws_event(ws_event.as_ref());
                 }
@@ -123,6 +133,17 @@ impl AltTabWorkspaceSwitcher {
         }
     }
 
+    fn end_sequence(&mut self, new_ws_id: i64) {
+        if self.tab_count == 0 {
+            return;
+        }
+        self.mru_workspaces.retain(|&id| id != new_ws_id);
+        self.mru_workspaces.push_front(new_ws_id);
+        self.tab_count = 0;
+    }
+
+    // Reduces code nesting
+    #[allow(clippy::comparison_chain)]
     // Can I take the event by moving or it will cost performance?
     fn handle_ws_event(&mut self, ws_event: &swayipc::WorkspaceEvent) {
         // Sway workspace event types:
@@ -138,11 +159,28 @@ impl AltTabWorkspaceSwitcher {
                     self.mru_workspaces.push_back(current_id);
                 }
                 swayipc::WorkspaceChange::Empty => {
-                    self.mru_workspaces.retain(|&x| x != current_id);
+                    if let Some(idx) = self.mru_workspaces.iter().position(|&x| x == current_id) {
+                        self.mru_workspaces.remove(idx);
+                        if idx < self.tab_count {
+                            self.tab_count -= 1;
+                        } else if idx == self.tab_count {
+                            // TODO: should we recover properly?
+                            panic!("Error: the currently focused workspace is deleted");
+                        }
+                    } else {
+                        println!("Warning: deleting unlisted workspace");
+                    }
                 }
                 swayipc::WorkspaceChange::Focus => {
-                    self.mru_workspaces.retain(|&x| x != current_id);
-                    self.mru_workspaces.push_front(current_id);
+                    if self.tab_count != 0 && current_id != self.mru_workspaces[self.tab_count] {
+                        // Workspace switch not caused by a tab press, stop the sequence
+                        self.end_sequence(current_id);
+                    }
+
+                    if self.tab_count == 0 {
+                        self.mru_workspaces.retain(|&x| x != current_id);
+                        self.mru_workspaces.push_front(current_id);
+                    }
                 }
                 _ => {}
             }
