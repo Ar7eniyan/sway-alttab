@@ -75,7 +75,9 @@ impl AltTabInterceptor {
             match ev {
                 Ok((ReadStatus::Success, ev)) => {
                     if let Some(ev) = self.on_event(ev) {
-                        self.out_device.write_event(&ev).unwrap();
+                        self.out_device
+                            .write_event(&ev)
+                            .expect("error writing to the uinput device");
                     }
                 }
                 Ok((ReadStatus::Sync, _)) => {
@@ -83,7 +85,7 @@ impl AltTabInterceptor {
                 }
                 Err(ref e) => {
                     if e.kind() != io::ErrorKind::WouldBlock {
-                        ev.unwrap();
+                        ev.expect("error reading from the input device");
                     }
                 }
             }
@@ -98,7 +100,9 @@ impl AltTabInterceptor {
             (EV_KEY(KEY_LEFTMETA) | EV_KEY(KEY_RIGHTMETA), 0 | 1) => {
                 self.meta_pressed = evt.value == 1;
                 if evt.value == 0 && self.was_tab {
-                    self.evt_tx.send(WorkspaceSwitcherEvent::EndMeta).unwrap();
+                    self.evt_tx
+                        .send(WorkspaceSwitcherEvent::EndMeta)
+                        .expect("can't send a key event, channel is dead");
                     self.was_tab = false;
                 }
                 Some(evt)
@@ -106,7 +110,9 @@ impl AltTabInterceptor {
             (EV_KEY(KEY_TAB), 1) => {
                 if self.meta_pressed {
                     self.was_tab = true;
-                    self.evt_tx.send(WorkspaceSwitcherEvent::Tab).unwrap();
+                    self.evt_tx
+                        .send(WorkspaceSwitcherEvent::Tab)
+                        .expect("can't send a key event, channel is dead");
                     None
                 } else {
                     Some(evt)
@@ -133,7 +139,7 @@ impl AltTabWorkspaceSwitcher {
         Self {
             evt_rx,
             sway_ipc: swayipc::Connection::new()
-                .expect("Sway IPC should be available for connection"),
+                .expect("sway IPC socket should be available for connection"),
             mru_workspaces: VecDeque::new(),
             tab_count: 0,
         }
@@ -141,19 +147,22 @@ impl AltTabWorkspaceSwitcher {
 
     fn run(&mut self) {
         loop {
-            let evt = self.evt_rx.recv().unwrap();
+            let evt = self.evt_rx.recv().expect("can't read from event channel");
             println!("Got event: {:?}, mru list: {}", evt, self.format_mru_list());
 
             match evt {
                 WorkspaceSwitcherEvent::Tab => {
                     // Switch to the next workspace, wrapping around if currently at the end
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
-                    let tree = self.sway_ipc.get_tree().unwrap();
+                    let tree = self
+                        .sway_ipc
+                        .get_tree()
+                        .expect("can't get container tree via sway IPC");
                     let ws_name = Self::workspace_name_by_id(&tree, self.mru_workspaces[self.tab_count])
-                        .expect("An ID must be associated with an existing workspace (MRU list is probably not in sync)");
+                        .expect("the id should be associated with an existing workspace (MRU list is probably not in sync)");
                     self.sway_ipc
                         .run_command(format!("workspace {}", ws_name))
-                        .unwrap();
+                        .expect("can't switch workspace using sway IPC command");
                 }
                 WorkspaceSwitcherEvent::EndMeta => {
                     self.end_sequence(self.mru_workspaces[self.tab_count]);
@@ -229,7 +238,10 @@ impl AltTabWorkspaceSwitcher {
 
     // For debugging purposes
     fn format_mru_list(&mut self) -> String {
-        let tree = self.sway_ipc.get_tree().unwrap();
+        let tree = self
+            .sway_ipc
+            .get_tree()
+            .expect("can't get container tree via sway IPC");
         format!(
             "{:?}",
             self.mru_workspaces
@@ -258,21 +270,25 @@ fn main() {
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
         .spawn(move || AltTabWorkspaceSwitcher::new(rx).run())
-        .unwrap();
+        .expect("can't create workspace switcher thread");
 
     std::thread::Builder::new()
         .name("interceptor".to_string())
         .spawn(move || interceptor.run())
-        .unwrap();
+        .expect("can't create keypress interceptor thread");
 
-    let conn = swayipc::Connection::new().unwrap();
-    let evt_iter = conn.subscribe([swayipc::EventType::Workspace]).unwrap();
+    let conn =
+        swayipc::Connection::new().expect("sway IPC socket should be available for connection");
+    let evt_iter = conn
+        .subscribe([swayipc::EventType::Workspace])
+        .expect("can't subscribe to sway IPC workspace events");
 
     // Forward sway workspace events to the switcher thread
     for evt in evt_iter {
         match evt {
             Ok(swayipc::Event::Workspace(evt)) => {
-                tx.send(WorkspaceSwitcherEvent::SwayWsEvent(evt)).unwrap()
+                tx.send(WorkspaceSwitcherEvent::SwayWsEvent(evt))
+                    .expect("can't send a sway workspace event, the channel is dead");
             }
             Err(e) => {
                 println!("Sway event stream error: {:?}", e);
