@@ -83,10 +83,9 @@ impl AltTabInterceptor {
                 Ok((ReadStatus::Sync, _)) => {
                     println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
                 }
-                Err(ref e) => {
-                    if e.kind() != io::ErrorKind::WouldBlock {
-                        ev.expect("error reading from the input device");
-                    }
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
+                Err(_) => {
+                    ev.expect("error reading from the input device");
                 }
             }
         }
