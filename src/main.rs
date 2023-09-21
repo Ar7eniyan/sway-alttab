@@ -151,6 +151,10 @@ impl AltTabWorkspaceSwitcher {
 
             match evt {
                 WorkspaceSwitcherEvent::Tab => {
+                    if self.mru_workspaces.is_empty() {
+                        continue;
+                    }
+
                     // Switch to the next workspace, wrapping around if currently at the end
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
                     let tree = self
@@ -164,6 +168,9 @@ impl AltTabWorkspaceSwitcher {
                         .expect("can't switch workspace using sway IPC command");
                 }
                 WorkspaceSwitcherEvent::EndMeta => {
+                    if self.mru_workspaces.is_empty() {
+                        continue;
+                    }
                     self.end_sequence(self.mru_workspaces[self.tab_count]);
                 }
                 WorkspaceSwitcherEvent::SwayWsEvent(ws_event) => {
