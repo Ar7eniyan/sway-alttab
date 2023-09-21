@@ -139,7 +139,7 @@ impl AltTabWorkspaceSwitcher {
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
                     let tree = self.sway_ipc.get_tree().unwrap();
                     let ws_name = Self::workspace_name_by_id(&tree, self.mru_workspaces[self.tab_count])
-                        .expect("An ID must be associated with a workspace with a vaild name (MRU-list is probably not in sync)");
+                        .expect("An ID must be associated with an existing workspace (MRU list is probably not in sync)");
                     self.sway_ipc
                         .run_command(format!("workspace {}", ws_name))
                         .unwrap();
@@ -244,11 +244,9 @@ fn main() {
         interceptor.out_device.devnode().unwrap_or("none")
     );
 
-    let mut ws_switcher = AltTabWorkspaceSwitcher::new(rx);
-
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
-        .spawn(move || ws_switcher.run())
+        .spawn(move || AltTabWorkspaceSwitcher::new(rx).run())
         .unwrap();
 
     std::thread::Builder::new()
