@@ -1,4 +1,5 @@
 use std::collections::VecDeque;
+use std::error::Error;
 use std::fs::OpenOptions;
 use std::io;
 use std::sync::mpsc::{Receiver, Sender};
@@ -39,15 +40,25 @@ struct AltTabInterceptor {
 }
 
 impl AltTabInterceptor {
-    fn new(in_device_path: &str, evt_tx: Sender<WorkspaceSwitcherEvent>) -> io::Result<Self> {
+    fn new(
+        in_device_path: &str,
+        evt_tx: Sender<WorkspaceSwitcherEvent>,
+    ) -> Result<Self, Box<dyn Error>> {
         let file = OpenOptions::new()
             .read(true)
             .write(true)
-            .open(in_device_path)?;
+            .open(in_device_path)
+            .map_err(|e| {
+                format!("can't open keyboard input device file ({in_device_path}): {e}")
+            })?;
 
-        let mut in_device = Device::new_from_file(file)?;
-        in_device.grab(evdev_rs::GrabMode::Grab)?;
-        let out_device = UInputDevice::create_from_device(&in_device)?;
+        let mut in_device = Device::new_from_file(file)
+            .map_err(|e| format!("can't create libevdev input device: {e}"))?;
+        in_device
+            .grab(evdev_rs::GrabMode::Grab)
+            .map_err(|e| format!("can't grab the input device: {e}"))?;
+        let out_device = UInputDevice::create_from_device(&in_device)
+            .map_err(|e| format!("can't create a uinput device: {e}"))?;
 
         Ok(Self {
             in_device,
