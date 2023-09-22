@@ -259,13 +259,14 @@ impl AltTabWorkspaceSwitcher {
 }
 
 fn main() {
+    let (tx, rx) = std::sync::mpsc::channel::<WorkspaceSwitcherEvent>();
+
     // When user presses enter to run this program in a terminal, the press
     // event is sent from the real keyboard, but the release event is sent
     // from the fake uinput device, creating a weird behavior of spamming enter.
     // The delay is to make sure the release event is sent correctly.
     // TODO: make the delay optional
     std::thread::sleep(std::time::Duration::from_millis(250));
-    let (tx, rx) = std::sync::mpsc::channel::<WorkspaceSwitcherEvent>();
 
     let mut interceptor = AltTabInterceptor::new("/dev/input/event12", tx.clone()).unwrap();
     println!(
