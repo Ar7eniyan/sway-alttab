@@ -60,6 +60,14 @@ impl AltTabInterceptor {
         let out_device = UInputDevice::create_from_device(&in_device)
             .map_err(|e| format!("can't create a uinput device: {e}"))?;
 
+        log::debug!("Initialized the keypress interceptor");
+        log::debug!("Keyboard input device: {in_device_path}");
+        log::debug!(
+            "UInput device devnode: {}, syspath: {}",
+            out_device.devnode().unwrap_or("none"),
+            out_device.syspath().unwrap_or("none")
+        );
+
         Ok(Self {
             in_device,
             out_device,
@@ -70,7 +78,10 @@ impl AltTabInterceptor {
     }
 
     fn run(&mut self) {
+        log::info!("Starting the keypress interceptor...");
+
         loop {
+
             let ev = self.in_device.next_event(ReadFlag::BLOCKING);
             match ev {
                 Ok((ReadStatus::Success, ev)) => {
@@ -81,9 +92,11 @@ impl AltTabInterceptor {
                     }
                 }
                 Ok((ReadStatus::Sync, _)) => {
-                    println!("Warning: there's no support for SYN_DROPPED yet, ignoring...")
+                    log::warn!("There's no support for SYN_DROPPED yet, ignoring");
                 }
-                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {}
+                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                    log::warn!("next_event() should block, something is wrong");
+                }
                 Err(_) => {
                     ev.expect("error reading from the input device");
                 }
@@ -135,19 +148,25 @@ struct AltTabWorkspaceSwitcher {
 
 impl AltTabWorkspaceSwitcher {
     fn new(evt_rx: Receiver<WorkspaceSwitcherEvent>) -> Self {
+        let sway_ipc =
+            swayipc::Connection::new().expect("sway IPC socket should be available for connection");
+
+        log::debug!("Initialized workspace switcher");
+
         Self {
             evt_rx,
-            sway_ipc: swayipc::Connection::new()
-                .expect("sway IPC socket should be available for connection"),
+            sway_ipc,
             mru_workspaces: VecDeque::new(),
             tab_count: 0,
         }
     }
 
     fn run(&mut self) {
+        log::info!("Starting the workspace switcher...");
+
         loop {
             let evt = self.evt_rx.recv().expect("can't read from event channel");
-            println!("Got event: {:?}, mru list: {}", evt, self.format_mru_list());
+            log::debug!("Processing event: {:?}", evt);
 
             match evt {
                 WorkspaceSwitcherEvent::Tab => {
@@ -177,6 +196,8 @@ impl AltTabWorkspaceSwitcher {
                     self.handle_ws_event(ws_event.as_ref());
                 }
             }
+
+            log::debug!("MRU list: {}", self.format_mru_list());
         }
     }
 
@@ -223,7 +244,7 @@ impl AltTabWorkspaceSwitcher {
                             panic!("Error: the currently focused workspace is deleted");
                         }
                     } else {
-                        println!("Warning: deleting unlisted workspace");
+                        log::warn!("Deleting unlisted workspace");
                     }
                 }
                 swayipc::WorkspaceChange::Focus => {
@@ -274,10 +295,6 @@ fn main() {
     std::thread::sleep(std::time::Duration::from_millis(250));
 
     let mut interceptor = AltTabInterceptor::new("/dev/input/event12", tx.clone()).unwrap();
-    println!(
-        "uinput device: {}",
-        interceptor.out_device.devnode().unwrap_or("none")
-    );
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
