@@ -259,6 +259,11 @@ impl AltTabWorkspaceSwitcher {
 }
 
 fn main() {
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .parse_default_env()
+        .init();
+
     let (tx, rx) = std::sync::mpsc::channel::<WorkspaceSwitcherEvent>();
 
     // When user presses enter to run this program in a terminal, the press
