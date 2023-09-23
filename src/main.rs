@@ -176,15 +176,7 @@ impl AltTabWorkspaceSwitcher {
 
                     // Switch to the next workspace, wrapping around if currently at the end
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
-                    let tree = self
-                        .sway_ipc
-                        .get_tree()
-                        .expect("can't get container tree via sway IPC");
-                    let ws_name = Self::workspace_name_by_id(&tree, self.mru_workspaces[self.tab_count])
-                        .expect("the id should be associated with an existing workspace (MRU list is probably not in sync)");
-                    self.sway_ipc
-                        .run_command(format!("workspace {}", ws_name))
-                        .expect("can't switch workspace using sway IPC command");
+                    self.switch_to_workspace(self.mru_workspaces[self.tab_count]);
                 }
                 WorkspaceSwitcherEvent::EndMeta => {
                     if self.mru_workspaces.is_empty() {
@@ -199,6 +191,21 @@ impl AltTabWorkspaceSwitcher {
 
             log::debug!("MRU list: {}", self.format_mru_list());
         }
+    }
+
+    fn switch_to_workspace(&mut self, id: i64) {
+        let tree = self
+            .sway_ipc
+            .get_tree()
+            .expect("can't get container tree via sway IPC");
+        let ws_name = Self::workspace_name_by_id(&tree, id)
+            .expect("the id should be associated with an existing workspace (MRU list is probably not in sync)");
+        self.sway_ipc
+            .run_command(format!("workspace {}", ws_name))
+            .expect("can't switch workspace using sway IPC command")[0]
+            // the only command is `workspace`, its result is at index 0
+            .as_ref()
+            .expect("can't switch workspace using sway IPC command");
     }
 
     fn workspace_name_by_id(tree: &swayipc::Node, id: i64) -> Option<&str> {
