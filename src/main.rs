@@ -81,7 +81,6 @@ impl AltTabInterceptor {
         log::info!("Starting the keypress interceptor...");
 
         loop {
-
             let ev = self.in_device.next_event(ReadFlag::BLOCKING);
             match ev {
                 Ok((ReadStatus::Success, ev)) => {
@@ -200,6 +199,13 @@ impl AltTabWorkspaceSwitcher {
             .expect("can't get container tree via sway IPC");
         let ws_name = Self::workspace_name_by_id(&tree, id)
             .expect("the id should be associated with an existing workspace (MRU list is probably not in sync)");
+
+        log::debug!(
+            "Focusing on workspace with id = {}, name = \"{}\"",
+            id,
+            ws_name
+        );
+
         self.sway_ipc
             .run_command(format!("workspace {}", ws_name))
             .expect("can't switch workspace using sway IPC command")[0]
@@ -247,22 +253,20 @@ impl AltTabWorkspaceSwitcher {
                         if idx < self.tab_count {
                             self.tab_count -= 1;
                         } else if idx == self.tab_count {
-                            // TODO: should we recover properly?
-                            panic!("Error: the currently focused workspace is deleted");
+                            panic!("the currently focused workspace is deleted");
                         }
                     } else {
                         log::warn!("Deleting unlisted workspace");
                     }
                 }
                 swayipc::WorkspaceChange::Focus => {
-                    if self.tab_count != 0 && current_id != self.mru_workspaces[self.tab_count] {
-                        // Workspace switch not caused by a tab press, stop the sequence
-                        self.end_sequence(current_id);
-                    }
-
                     if self.tab_count == 0 {
                         self.mru_workspaces.retain(|&x| x != current_id);
                         self.mru_workspaces.push_front(current_id);
+                    } else if current_id != self.mru_workspaces[self.tab_count] {
+                        // Tab sequence is active and the workspace switch isn't
+                        // caused by a tab press, stop the sequence
+                        self.end_sequence(current_id);
                     }
                 }
                 _ => {}
@@ -288,7 +292,7 @@ impl AltTabWorkspaceSwitcher {
 
 fn main() {
     env_logger::builder()
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Trace)
         .parse_default_env()
         .init();
 
