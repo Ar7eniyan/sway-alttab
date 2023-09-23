@@ -305,7 +305,12 @@ fn main() {
     // TODO: make the delay optional
     std::thread::sleep(std::time::Duration::from_millis(250));
 
-    let mut interceptor = AltTabInterceptor::new("/dev/input/event12", tx.clone()).unwrap();
+    let input_device_path = std::env::args().nth(1);
+    if input_device_path.is_none() {
+        log::error!("the keyboard input device name should be provided in the first argument");
+        return;
+    }
+    let mut interceptor = AltTabInterceptor::new(&input_device_path.unwrap(), tx.clone()).unwrap();
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
