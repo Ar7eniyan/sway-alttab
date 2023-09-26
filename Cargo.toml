@@ -1,10 +1,11 @@
 [package]
 name = "sway-alttab"
 version = "0.2.1"
+description = "A tool which brings familiar Alt-Tab shortcut to Sway WM workspaces on Linux"
+repository = "https://github.com/ar7eniyan/sway-alttab"
+keywords = ["linux", "wayland", "keyboard-shortcut"]
 license = "GPL-3.0-or-later"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 evdev-rs = "0.6.1"
