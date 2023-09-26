@@ -1,18 +1,12 @@
 use std::collections::VecDeque;
 use std::error::Error;
-use std::fs::OpenOptions;
-use std::io;
 use std::os::fd::AsRawFd;
 use std::sync::mpsc::{Receiver, Sender};
 
 use clap::Parser;
 use evdev_rs::enums::EventCode::EV_KEY;
 use evdev_rs::enums::EV_KEY::{KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB};
-use evdev_rs::Device;
-use evdev_rs::InputEvent;
-use evdev_rs::ReadFlag;
-use evdev_rs::ReadStatus;
-use evdev_rs::UInputDevice;
+use evdev_rs::{Device, InputEvent, ReadFlag, ReadStatus, UInputDevice};
 
 #[derive(clap::Parser)]
 #[command(author, version, about, long_about = None)]
@@ -57,7 +51,7 @@ impl AltTabInterceptor {
         in_device_path: &std::path::Path,
         evt_tx: Sender<WorkspaceSwitcherEvent>,
     ) -> Result<Self, Box<dyn Error>> {
-        let file = OpenOptions::new()
+        let file = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(in_device_path)
@@ -109,7 +103,7 @@ impl AltTabInterceptor {
                 Ok((ReadStatus::Sync, _)) => {
                     log::warn!("There's no support for SYN_DROPPED yet, ignoring");
                 }
-                Err(e) if e.kind() == io::ErrorKind::WouldBlock => {
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
                     log::warn!("next_event() should block, something is wrong");
                 }
                 Err(_) => {
