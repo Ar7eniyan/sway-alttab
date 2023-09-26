@@ -311,7 +311,7 @@ fn main() {
 
     // When user presses enter to run this program in a terminal, the press
     // event is sent from the real keyboard, but the release event is sent
-    // from the fake uinput device, creating a weird behavior of spamming enter.
+    // from the fake uinput device, creating a stream of repeated enter presses.
     // The delay is to make sure the release event is sent correctly.
     let interactive = unsafe { libc::isatty(std::io::stdin().as_raw_fd()) == 1 };
     if interactive {
