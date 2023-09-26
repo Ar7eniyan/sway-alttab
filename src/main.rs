@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::error::Error;
 use std::fs::OpenOptions;
 use std::io;
+use std::os::fd::{AsRawFd};
 use std::sync::mpsc::{Receiver, Sender};
 
 use evdev_rs::enums::EventCode::EV_KEY;
@@ -302,13 +303,10 @@ fn main() {
     // event is sent from the real keyboard, but the release event is sent
     // from the fake uinput device, creating a weird behavior of spamming enter.
     // The delay is to make sure the release event is sent correctly.
-    // TODO: make the delay optional
-    std::thread::sleep(std::time::Duration::from_millis(250));
-
-    let input_device_path = std::env::args().nth(1);
-    if input_device_path.is_none() {
-        log::error!("the keyboard input device name should be provided in the first argument");
-        return;
+    let interactive = unsafe { libc::isatty(std::io::stdin().as_raw_fd()) == 1 };
+    if interactive {
+        log::debug!("Performing a 500ms delay because running interactively...");
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
     let mut interceptor = AltTabInterceptor::new(&input_device_path.unwrap(), tx.clone()).unwrap();
 
