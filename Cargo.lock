@@ -352,18 +352,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
-name = "sway-alttab"
-version = "0.2.1"
-dependencies = [
- "clap",
- "env_logger",
- "evdev-rs",
- "libc",
- "log",
- "swayipc",
-]
-
-[[package]]
 name = "swayipc"
 version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -383,6 +371,18 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "swaywm-alttab"
+version = "0.2.1"
+dependencies = [
+ "clap",
+ "env_logger",
+ "evdev-rs",
+ "libc",
+ "log",
+ "swayipc",
 ]
 
 [[package]]

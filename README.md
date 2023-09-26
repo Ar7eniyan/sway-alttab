@@ -1,4 +1,4 @@
-# sway-alttab
+# swaywm-alttab
 
 A tool which brings familiar Alt-Tab shortcut from stacking window managers (used in Windows, Mac, KDE, GNOME, etc.) to Sway WM workspaces on Linux
 
@@ -6,9 +6,9 @@ A tool which brings familiar Alt-Tab shortcut from stacking window managers (use
 
 Install a binary crate with cargo:
 ```
-cargo install --git https://github.com/ar7eniyan/sway-alttab
+cargo install --git https://github.com/ar7eniyan/swaywm-alttab
 ```
-The `sway-alttab` binary is going to be in `~/.cargo/bin`, add it to `PATH` if needed
+The `swaywm-alttab` binary is going to be in `~/.cargo/bin`, add it to `PATH` if needed
 
 TODO: make an AUR package.
 
@@ -18,9 +18,9 @@ To use this program, you'll need to find the input device file for your keyboard
 
 ### Seting up the permissions for keyboard input/output to work
 
-In order for `sway-alttab` to properly access input devices and uinput kernel device as an unpriviliged user, the following steps should be made:
+In order for `swaywm-alttab` to properly access input devices and uinput kernel device as an unpriviliged user, the following steps should be made:
 - Create udev rules for `/dev/input/` and `/dev/uinput`:
-    -  `/etc/udev/rules.d/72-sway-alttab-input.rules`:
+    -  `/etc/udev/rules.d/72-swaywm-alttab-input.rules`:
         ```
         KERNEL=="uinput", MODE="0660", TAG+="uaccess"
         SUBSYSTEM=="input", MODE="0660", TAG+="uaccess"
@@ -44,13 +44,13 @@ In order for `sway-alttab` to properly access input devices and uinput kernel de
 
 After you found the `/dev/input/eventN` path for your keyboard and set up the permissions, start the tool in a terminal to check if everything works correctly. Pass the input device path as an argument, replacing `N` with yout actual device number:
 ```
-~/.cargo/bin/sway-alttab /dev/input/eventN
+~/.cargo/bin/swaywm-alttab /dev/input/eventN
 ```
 Focus on different workspaces for the tool to start keeping track of them, and press Alt-Tab shortcut to see if it works.
 
-To run `sway-alttab` on sway startup, add the following line to `~/.config/sway/config`:
+To run `swaywm-alttab` on sway startup, add the following line to `~/.config/sway/config`:
 ```
-exec ~/.cargo/bin/sway-alttab /dev/input/eventN
+exec ~/.cargo/bin/swaywm-alttab /dev/input/eventN
 ```
 
 ## Debugging
