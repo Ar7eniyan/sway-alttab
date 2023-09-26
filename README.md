@@ -1,12 +1,12 @@
 # sway-alttab
 
-A tool which brings familliar Alt-Tab shortcut from stacking window managers (used in Windows, Mac, KDE, GNOME, etc.) to Sway WM workspaces on Linux
+A tool which brings familiar Alt-Tab shortcut from stacking window managers (used in Windows, Mac, KDE, GNOME, etc.) to Sway WM workspaces on Linux
 
 ## Installation
 
 Install a binary crate with cargo:
 ```
-cargo install https://github.com/ar7eniyan/sway-alttab
+cargo install --git https://github.com/ar7eniyan/sway-alttab
 ```
 The `sway-alttab` binary is going to be in `~/.cargo/bin`, add it to `PATH` if needed
 
@@ -14,7 +14,7 @@ TODO: make an AUR package.
 
 ## Configuration
 
-To use this program, you'll need to find the input device file for your keyboard. Input device files are places by the Linux kernel in `/dev/input/eventN`. There are some tools to show the available input devices: for example `evtest` or `libinput debug-events`. Without using any third-party software, the names and other attributes of input devices can be found by `cat /proc/bus/input/devices`.
+To use this program, you'll need to find the input device file for your keyboard. Input device files are placed by the Linux kernel in `/dev/input/eventN`. There are some tools to show the available input devices: for example `evtest` or `libinput debug-events`. Without using any third-party software, the names and other attributes of input devices can be found by `cat /proc/bus/input/devices`.
 
 ### Seting up the permissions for keyboard input/output to work
 
@@ -55,8 +55,7 @@ exec ~/.cargo/bin/sway-alttab /dev/input/eventN
 
 ## Debugging
 
-To enable logging, set environment variable RUST_LOG to one of these values: error, warn, info, debug, trace. The default log level is info.
-For more complex selectors, see [env_logger](https://docs.rs/env_logger/latest/env_logger/#enabling-logging)'s documentation.
+To enable logging, set environment variable RUST_LOG to one of these values: error, warn, info, debug, trace. The default log level is info. For more complex selectors, see [env_logger](https://docs.rs/env_logger/latest/env_logger/#enabling-logging)'s documentation.
 
 ## Further development
 
