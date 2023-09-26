@@ -5,6 +5,7 @@ use std::io;
 use std::os::fd::{AsRawFd};
 use std::sync::mpsc::{Receiver, Sender};
 
+use clap::Parser;
 use evdev_rs::enums::EventCode::EV_KEY;
 use evdev_rs::enums::EV_KEY::{KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB};
 use evdev_rs::Device;
@@ -12,6 +13,17 @@ use evdev_rs::InputEvent;
 use evdev_rs::ReadFlag;
 use evdev_rs::ReadStatus;
 use evdev_rs::UInputDevice;
+
+#[derive(clap::Parser)]
+#[command(author, version, about, long_about = None)]
+struct Cli {
+    // TODO: make optional, try to autodetect if not given
+    #[arg(
+        help = "The keyboard input device path to use for intercepting keypresses\n\
+        (/dev/input/eventN or other)"
+    )]
+    input_device: std::path::PathBuf,
+}
 
 enum WorkspaceSwitcherEvent {
     Tab,
@@ -297,6 +309,7 @@ fn main() {
         .parse_default_env()
         .init();
 
+    let cli = Cli::parse();
     let (tx, rx) = std::sync::mpsc::channel::<WorkspaceSwitcherEvent>();
 
     // When user presses enter to run this program in a terminal, the press
@@ -308,7 +321,10 @@ fn main() {
         log::debug!("Performing a 500ms delay because running interactively...");
         std::thread::sleep(std::time::Duration::from_millis(500));
     }
-    let mut interceptor = AltTabInterceptor::new(&input_device_path.unwrap(), tx.clone()).unwrap();
+
+    let input_device_path = cli.input_device;
+    let mut interceptor =
+        AltTabInterceptor::new(input_device_path.to_str().unwrap(), tx.clone()).unwrap();
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
