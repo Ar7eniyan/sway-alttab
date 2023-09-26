@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::error::Error;
 use std::fs::OpenOptions;
 use std::io;
-use std::os::fd::{AsRawFd};
+use std::os::fd::AsRawFd;
 use std::sync::mpsc::{Receiver, Sender};
 
 use clap::Parser;
@@ -54,7 +54,7 @@ struct AltTabInterceptor {
 
 impl AltTabInterceptor {
     fn new(
-        in_device_path: &str,
+        in_device_path: &std::path::Path,
         evt_tx: Sender<WorkspaceSwitcherEvent>,
     ) -> Result<Self, Box<dyn Error>> {
         let file = OpenOptions::new()
@@ -62,7 +62,10 @@ impl AltTabInterceptor {
             .write(true)
             .open(in_device_path)
             .map_err(|e| {
-                format!("can't open keyboard input device file ({in_device_path}): {e}")
+                format!(
+                    "can't open keyboard input device file ({}): {e}",
+                    in_device_path.display()
+                )
             })?;
 
         let mut in_device = Device::new_from_file(file)
@@ -74,7 +77,7 @@ impl AltTabInterceptor {
             .map_err(|e| format!("can't create a uinput device: {e}"))?;
 
         log::debug!("Initialized the keypress interceptor");
-        log::debug!("Keyboard input device: {in_device_path}");
+        log::debug!("Keyboard input device: {}", in_device_path.display());
         log::debug!(
             "UInput device devnode: {}, syspath: {}",
             out_device.devnode().unwrap_or("none"),
@@ -323,8 +326,7 @@ fn main() {
     }
 
     let input_device_path = cli.input_device;
-    let mut interceptor =
-        AltTabInterceptor::new(input_device_path.to_str().unwrap(), tx.clone()).unwrap();
+    let mut interceptor = AltTabInterceptor::new(&input_device_path, tx.clone()).unwrap();
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
