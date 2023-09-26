@@ -300,7 +300,7 @@ impl AltTabWorkspaceSwitcher {
     }
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn Error>> {
     env_logger::builder()
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
@@ -320,30 +320,32 @@ fn main() {
     }
 
     let input_device_path = cli.input_device;
-    let mut interceptor = AltTabInterceptor::new(&input_device_path, tx.clone()).unwrap();
+    let mut interceptor = AltTabInterceptor::new(&input_device_path, tx.clone())?;
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
         .spawn(move || AltTabWorkspaceSwitcher::new(rx).run())
-        .expect("can't create workspace switcher thread");
+        .map_err(|e| format!("can't create workspace switcher thread: {e}"))?;
 
     std::thread::Builder::new()
         .name("interceptor".to_string())
         .spawn(move || interceptor.run())
-        .expect("can't create keypress interceptor thread");
+        .map_err(|e| format!("can't create keypress interceptor thread: {e}"))?;
 
-    let conn =
-        swayipc::Connection::new().expect("sway IPC socket should be available for connection");
+    let conn = swayipc::Connection::new()
+        .map_err(|e| format!("sway IPC socket should be available for connection: {e}"))?;
     let evt_iter = conn
         .subscribe([swayipc::EventType::Workspace])
-        .expect("can't subscribe to sway IPC workspace events");
+        .map_err(|e| format!("can't subscribe to sway IPC workspace events: {e}"))?;
 
     // Forward sway workspace events to the switcher thread
     for evt in evt_iter {
         match evt {
             Ok(swayipc::Event::Workspace(evt)) => {
                 tx.send(WorkspaceSwitcherEvent::SwayWsEvent(evt))
-                    .expect("can't send a sway workspace event, the channel is dead");
+                    .map_err(|e| {
+                        format!("can't send a sway workspace event, the channel is dead: {e}")
+                    })?;
             }
             Err(e) => {
                 println!("Sway event stream error: {:?}", e);
