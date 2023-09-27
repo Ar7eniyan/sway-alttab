@@ -46,7 +46,7 @@ After you found the `/dev/input/eventN` path for your keyboard and set up the pe
 ```
 ~/.cargo/bin/swaywm-alttab /dev/input/eventN
 ```
-Focus on different workspaces for the tool to start keeping track of them, and press Alt-Tab shortcut to see if it works.
+The actual shortcut is not Alt+Tab, but `(LMeta|RMeta)+Tab`, following the default Sway usage of Meta key for navigation. Focus on different workspaces for the tool to start keeping track of them, and press the key combination to see if it works.
 
 To run `swaywm-alttab` on sway startup, add the following line to `~/.config/sway/config`:
 ```
