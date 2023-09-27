@@ -55,16 +55,18 @@ exec ~/.cargo/bin/swaywm-alttab /dev/input/eventN
 
 ### Custom shortcut
 
-The default shortcut is `(LMeta|RMeta)+Tab`, remember that. But if you want, you can configure any key combination by using `--modifiers` and `--trigger` options. For example, the default setup would look like this if redundantly configured with the mentioned options: `swaywm-alttab --modifiers KEY_LEFTMETA KEY_RIGHTMETA --trigger KEY_TAB <input device>`. Supported key names (`KEY_TAB`, etc.) are listed [here](https://docs.rs/evdev-rs/latest/evdev_rs/enums/enum.EV_KEY.html) and are the `EV_KEY` keycode names from the [Linux API code](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h). The app supports setting 1 or 2 modifier keys, and exactly one trigger key if you need to change it for some reason. To use the Alt+Tab shortcut (like on most platforms) instead of Meta+Tab, run the app like this:
+The default shortcut is `(LMeta|RMeta)+Tab`, remember that. But if you want, you can configure any key combination by using `--modifiers` and `--trigger` options. For example, the default setup would look like this if redundantly configured with the mentioned options: `swaywm-alttab --modifiers KEY_LEFTMETA KEY_RIGHTMETA --trigger KEY_TAB <input device>`. Supported key names (`KEY_TAB`, etc.) are listed [here](https://docs.rs/evdev-rs/latest/evdev_rs/enums/enum.EV_KEY.html) and are the `EV_KEY` keycode names from the [Linux API code](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h). The app supports setting 1 or 2 modifier keys, and exactly one trigger key if you need to change it for some reason.
+
+To use the Alt+Tab shortcut instead of Meta+Tab (like on most platforms), run the app like this:
 ```
 ~/.cargo/bin/swaywm-alttab <input device> --modifiers KEY_LEFTALT
 ```
-> [!WARNING]
-> Be careful when passing `--modifiers` option since it takes up to two values, which would mistakenly try to parse the path as a key name in this case:
-> ```
-> ~/.cargo/bin/swaywm-alttab --modifiers KEY_LEFTALT <input device>
-> error: invalid value '<input device>' for '--modifiers <MODIFIERS>...': no such key code
-> ```
+
+**Warning**: be careful when passing `--modifiers` option since it takes up to two values, which would mistakenly try to parse the path as a key name in this case:
+```
+~/.cargo/bin/swaywm-alttab --modifiers KEY_LEFTALT <input device>
+error: invalid value '<input device>' for '--modifiers <MODIFIERS>...': no such key code
+```
 
 ## Debugging
 
