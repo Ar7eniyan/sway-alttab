@@ -53,16 +53,29 @@ To run `swaywm-alttab` on sway startup, add the following line to `~/.config/swa
 exec ~/.cargo/bin/swaywm-alttab /dev/input/eventN
 ```
 
+### Custom key combination
+
+The default key combination is `(LMeta|RMeta)+Tab`, remember that. But if you want, you can configure any key combination by using command line `--modifiers` and `--trigger` options. For example, the default setup would look like this if redundantly configured with the mentioned options: `swaywm-alttab --modifiers KEY_LEFTMETA KEY_RIGHTMETA --trigger KEY_TAB <input device>`. The app supports setting 1 or 2 modifier keys, and exactly one trigger key if you need to change it for some reason. To use the Alt+Tab shortcut (like on most platforms) instead of Meta+Tab, run the app like this:
+```
+~/.cargo/bin/swaywm-alttab <input device> --modifiers KEY_LEFTALT
+```
+> [!WARNING]
+> Be careful when passing `--modifiers` option since it takes up to two values, which would mistakenly try to parse the path as a key name in this case:
+> ```
+> ~/.cargo/bin/swaywm-alttab --modifiers KEY_LEFTALT <input device>
+> error: invalid value '<input device>' for '--modifiers <MODIFIERS>...': no such key code
+> ```
+
 ## Debugging
 
 To enable logging, set environment variable RUST_LOG to one of these values: error, warn, info, debug, trace. The default log level is info. For more complex selectors, see [env_logger](https://docs.rs/env_logger/latest/env_logger/#enabling-logging)'s documentation.
 
 ## Further development
 
-- Find a more convinient way to switch workspaces (ideally, by their con_id)
-- Make a key combination configurable
-- Implement input device autodetection if it's possible
-- Add workspace overview UI like in [sov](https://github.com/milgra/sov)
+- [ ] Find a more convinient way to switch workspaces (ideally, by their con_id)
+- [X] Make a key combination configurable
+- [ ] Implement input device autodetection if it's possible
+- [ ] Add workspace overview UI like in [sov](https://github.com/milgra/sov)
 
 ## License: GNU GPLv3, see [COPYING](COPYING)
 
