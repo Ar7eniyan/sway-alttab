@@ -1,6 +1,6 @@
 [package]
 name = "swaywm-alttab"
-version = "0.3.0"
+version = "0.3.1"
 description = "A tool which brings familiar Alt-Tab shortcut to Sway WM workspaces on Linux"
 repository = "https://github.com/ar7eniyan/swaywm-alttab"
 keywords = ["linux", "wayland", "keyboard-shortcut"]
