@@ -14,7 +14,7 @@ TODO: make an AUR package.
 
 ## Configuration
 
-To use this program, you'll need to find the input device file for your keyboard. Input device files are placed by the Linux kernel in `/dev/input/eventN`. There are some tools to show the available input devices: for example `evtest` or `libinput debug-events`. Without using any third-party software, the names and other attributes of input devices can be found by `cat /proc/bus/input/devices`.
+To use this program, you'll need to find the input device file for your keyboard. Input device files are placed by the Linux kernel in `/dev/input/eventN`. There are some tools to show the available input devices: for example `sudo evtest` or `sudo libinput debug-events`. Without using any third-party software, the names and other attributes of input devices can be found by `cat /proc/bus/input/devices`.
 
 ### Seting up the permissions for keyboard input/output to work
 
