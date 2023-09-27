@@ -53,9 +53,9 @@ To run `swaywm-alttab` on sway startup, add the following line to `~/.config/swa
 exec ~/.cargo/bin/swaywm-alttab /dev/input/eventN
 ```
 
-### Custom key combination
+### Custom shortcut
 
-The default key combination is `(LMeta|RMeta)+Tab`, remember that. But if you want, you can configure any key combination by using command line `--modifiers` and `--trigger` options. For example, the default setup would look like this if redundantly configured with the mentioned options: `swaywm-alttab --modifiers KEY_LEFTMETA KEY_RIGHTMETA --trigger KEY_TAB <input device>`. The app supports setting 1 or 2 modifier keys, and exactly one trigger key if you need to change it for some reason. To use the Alt+Tab shortcut (like on most platforms) instead of Meta+Tab, run the app like this:
+The default shortcut is `(LMeta|RMeta)+Tab`, remember that. But if you want, you can configure any key combination by using `--modifiers` and `--trigger` options. For example, the default setup would look like this if redundantly configured with the mentioned options: `swaywm-alttab --modifiers KEY_LEFTMETA KEY_RIGHTMETA --trigger KEY_TAB <input device>`. Supported key names (`KEY_TAB`, etc.) are listed [here](https://docs.rs/evdev-rs/latest/evdev_rs/enums/enum.EV_KEY.html) and are the `EV_KEY` keycode names from the [Linux API code](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h). The app supports setting 1 or 2 modifier keys, and exactly one trigger key if you need to change it for some reason. To use the Alt+Tab shortcut (like on most platforms) instead of Meta+Tab, run the app like this:
 ```
 ~/.cargo/bin/swaywm-alttab <input device> --modifiers KEY_LEFTALT
 ```
