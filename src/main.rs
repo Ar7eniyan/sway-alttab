@@ -5,10 +5,13 @@ use std::sync::mpsc::{Receiver, Sender};
 
 use clap::Parser;
 use evdev_rs::enums::EventCode::EV_KEY;
-use evdev_rs::enums::EV_KEY::{KEY_LEFTMETA, KEY_RIGHTMETA, KEY_TAB};
 use evdev_rs::{Device, InputEvent, ReadFlag, ReadStatus, UInputDevice};
 
-#[derive(clap::Parser)]
+fn parse_keycode(key: &str) -> Result<evdev_rs::enums::EV_KEY, &'static str> {
+    <evdev_rs::enums::EV_KEY as std::str::FromStr>::from_str(key).map_err(|_| "no such key code")
+}
+
+#[derive(clap::Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     // TODO: make optional, try to autodetect if not given
@@ -17,19 +20,37 @@ struct Cli {
         (/dev/input/eventN or other)"
     )]
     input_device: std::path::PathBuf,
+
+    #[arg(
+        short, long,
+        value_parser = parse_keycode,
+        num_args = 1..=2,
+        value_delimiter = ',',
+        default_values = ["KEY_LEFTMETA", "KEY_RIGHTMETA"]
+    )]
+    /// The first key in the Alt-Tab sequence (modifier), up to 2 options
+    modifiers: Vec<evdev_rs::enums::EV_KEY>,
+
+    #[arg(
+        short, long,
+        value_parser = parse_keycode,
+        default_value = "KEY_TAB"
+    )]
+    /// The second key in the Alt-Tab seqence (trigger)
+    trigger: evdev_rs::enums::EV_KEY,
 }
 
 enum WorkspaceSwitcherEvent {
-    Tab,
-    EndMeta,
+    Trigger,
+    EndMod,
     SwayWsEvent(Box<swayipc::WorkspaceEvent>),
 }
 
 impl std::fmt::Debug for WorkspaceSwitcherEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Tab => f.write_str("Tab"),
-            Self::EndMeta => f.write_str("EndMeta"),
+            Self::Trigger => f.write_str("Trigger"),
+            Self::EndMod => f.write_str("EndMod"),
             Self::SwayWsEvent(evt) => {
                 // Default debug output for WorkspaceEvent is too large, display only the change type
                 f.write_fmt(format_args!("SwayWsEvent({:?})", evt.as_ref().change))
@@ -38,10 +59,19 @@ impl std::fmt::Debug for WorkspaceSwitcherEvent {
     }
 }
 
+struct KeyConfig {
+    // To avoid searching in Vec<EV_KEY>, there is one required modifier and one optional
+    // Guess it helps with performance (remember, we're filtering realtime keyboard events)
+    modifier1: evdev_rs::enums::EV_KEY,
+    modifier2: Option<evdev_rs::enums::EV_KEY>,
+    trigger: evdev_rs::enums::EV_KEY,
+}
+
 struct AltTabInterceptor {
     in_device: Device,
     out_device: UInputDevice,
     evt_tx: Sender<WorkspaceSwitcherEvent>,
+    key_config: KeyConfig,
     was_tab: bool,
     meta_pressed: bool,
 }
@@ -50,7 +80,17 @@ impl AltTabInterceptor {
     fn new(
         in_device_path: &std::path::Path,
         evt_tx: Sender<WorkspaceSwitcherEvent>,
+        key_config: KeyConfig,
     ) -> Result<Self, Box<dyn Error>> {
+        if key_config.trigger == key_config.modifier1
+            || Some(key_config.trigger) == key_config.modifier2
+        {
+            return Err(
+                "the modifier keys overlap with the trigger key, check your key configuration"
+                    .into(),
+            );
+        }
+
         let file = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
@@ -82,6 +122,7 @@ impl AltTabInterceptor {
             in_device,
             out_device,
             evt_tx,
+            key_config,
             was_tab: false,
             meta_pressed: false,
         })
@@ -118,21 +159,23 @@ impl AltTabInterceptor {
     fn on_event(&mut self, evt: InputEvent) -> Option<InputEvent> {
         // evt.value in EV_KEY is 0 for release, 1 for press and 2 for hold.
         match (evt.event_code, evt.value) {
-            (EV_KEY(KEY_LEFTMETA) | EV_KEY(KEY_RIGHTMETA), 0 | 1) => {
+            (EV_KEY(mod_), 0 | 1)
+                if mod_ == self.key_config.modifier1 || Some(mod_) == self.key_config.modifier2 =>
+            {
                 self.meta_pressed = evt.value == 1;
                 if evt.value == 0 && self.was_tab {
                     self.evt_tx
-                        .send(WorkspaceSwitcherEvent::EndMeta)
+                        .send(WorkspaceSwitcherEvent::EndMod)
                         .expect("can't send a key event, channel is dead");
                     self.was_tab = false;
                 }
                 Some(evt)
             }
-            (EV_KEY(KEY_TAB), 1) => {
+            (EV_KEY(trig), 1) if trig == self.key_config.trigger => {
                 if self.meta_pressed {
                     self.was_tab = true;
                     self.evt_tx
-                        .send(WorkspaceSwitcherEvent::Tab)
+                        .send(WorkspaceSwitcherEvent::Trigger)
                         .expect("can't send a key event, channel is dead");
                     None
                 } else {
@@ -178,7 +221,7 @@ impl AltTabWorkspaceSwitcher {
             log::debug!("Processing event: {:?}", evt);
 
             match evt {
-                WorkspaceSwitcherEvent::Tab => {
+                WorkspaceSwitcherEvent::Trigger => {
                     if self.mru_workspaces.is_empty() {
                         continue;
                     }
@@ -187,7 +230,7 @@ impl AltTabWorkspaceSwitcher {
                     self.tab_count = (self.tab_count + 1) % self.mru_workspaces.len();
                     self.switch_to_workspace(self.mru_workspaces[self.tab_count]);
                 }
-                WorkspaceSwitcherEvent::EndMeta => {
+                WorkspaceSwitcherEvent::EndMod => {
                     if self.mru_workspaces.is_empty() {
                         continue;
                     }
@@ -307,6 +350,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .init();
 
     let cli = Cli::parse();
+    log::debug!("Parsed arguments: {:#?}", cli);
     let (tx, rx) = std::sync::mpsc::channel::<WorkspaceSwitcherEvent>();
 
     // When user presses enter to run this program in a terminal, the press
@@ -320,7 +364,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let input_device_path = cli.input_device;
-    let mut interceptor = AltTabInterceptor::new(&input_device_path, tx.clone())?;
+    let mut interceptor = AltTabInterceptor::new(
+        &input_device_path,
+        tx.clone(),
+        KeyConfig {
+            modifier1: cli.modifiers[0],
+            modifier2: cli.modifiers.get(1).copied(),
+            trigger: cli.trigger,
+        },
+    )?;
 
     std::thread::Builder::new()
         .name("workspace-switcher".to_string())
