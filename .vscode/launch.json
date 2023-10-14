@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'sway-alttab'",
+            "name": "Debug executable 'swaywm-alttab'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=sway-alttab",
-                    "--package=sway-alttab"
+                    "--bin=swaywm-alttab",
+                    "--package=swaywm-alttab"
                 ],
                 "filter": {
-                    "name": "sway-alttab",
+                    "name": "swaywm-alttab",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'sway-alttab'",
+            "name": "Debug unit tests in executable 'swaywm-alttab'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=sway-alttab",
-                    "--package=sway-alttab"
+                    "--bin=swaywm-alttab",
+                    "--package=swaywm-alttab"
                 ],
                 "filter": {
-                    "name": "sway-alttab",
+                    "name": "swaywm-alttab",
                     "kind": "bin"
                 }
             },
