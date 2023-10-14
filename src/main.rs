@@ -3,6 +3,7 @@ use std::os::fd::AsRawFd;
 
 use clap::Parser;
 
+mod gui;
 mod interceptor;
 mod switcher;
 
@@ -66,6 +67,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         .filter_level(log::LevelFilter::Info)
         .parse_default_env()
         .init();
+
+    let mut gui = gui::Gui::new();
+    gui.run();
+    return Ok(());
 
     let cli = Cli::parse();
     log::debug!("Parsed arguments: {:#?}", cli);
