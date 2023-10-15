@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     })?;
             }
             Err(e) => {
-                println!("Sway event stream error: {:?}", e);
+                return Err(format!("sway IPC listener error: {e}").into());
             }
             _ => {}
         }
