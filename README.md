@@ -77,7 +77,9 @@ To enable logging, set environment variable RUST_LOG to one of these values: err
 - [ ] Find a more convinient way to switch workspaces (ideally, by their con_id)
 - [X] Make a key combination configurable
 - [ ] Implement input device autodetection if it's possible
-- [ ] Add workspace overview UI like in [sov](https://github.com/milgra/sov)
+- [ ] Add workspace overview UI like in [sov](https://github.com/milgra/sov) (work in progress)
+- [ ] Refactor README
+- [ ] Support multiple monitors
 
 ## License: GNU GPLv3, see [COPYING](COPYING)
 
